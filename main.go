@@ -59,9 +59,8 @@ func (e *EletricTruck) UnloadCargo() error {
 func processTruck(ctx context.Context, truck Truck) error {
 	log.Printf("processing... truck %+v\n", truck)
 
-	// access the user id
-	userId := ctx.Value(UserIDKey)
-	log.Println(userId)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*2)
+	defer cancel()
 
 	// Simulate some processing time
 	time.Sleep(time.Second)
