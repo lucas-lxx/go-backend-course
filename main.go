@@ -59,8 +59,16 @@ func (e *EletricTruck) UnloadCargo() error {
 func processTruck(ctx context.Context, truck Truck) error {
 	log.Printf("processing... truck %+v\n", truck)
 
-	ctx, cancel := context.WithTimeout(ctx, time.Second*2)
+	ctx, cancel := context.WithTimeout(ctx, time.Second*1)
 	defer cancel()
+
+	delay := time.Second * 3
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(delay):
+		break
+	}
 
 	// Simulate some processing time
 	time.Sleep(time.Second)
@@ -80,32 +88,49 @@ func processTruck(ctx context.Context, truck Truck) error {
 
 func processFleet(ctx context.Context, trucks []Truck) error {
 	var wg sync.WaitGroup
+	errorsChan := make(chan error, len(trucks))
 
 	for _, t := range trucks {
 		wg.Add(1)
+
 		go func(t Truck) {
 			if err := processTruck(ctx, t); err != nil {
-				log.Println(err)
+				// log.Println(err)
+				errorsChan <- err
 			}
 			wg.Done()
 		}(t)
 	}
+
 	wg.Wait()
 
+	close(errorsChan)
+	var errs []error
+	for err := range errorsChan {
+		log.Printf("Error processing truck: %v\n", err)
+		errs = append(errs, err)
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("fleet processing had %d errors\n", len(errs))
+	}
 	return nil
 }
 
 func main() {
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, UserIDKey, 42)
+	// ctx = context.WithValue(ctx, UserIDKey, 42)
 	// var normalTruck *NormalTruck = &NormalTruck{id: "1"}
 	fleet := []Truck{
 		&NormalTruck{id: "NT1", cargo: 0},
 		&EletricTruck{id: "ET2", cargo: 0, battery: 100},
 		&NormalTruck{id: "NT3", cargo: 0},
 		&EletricTruck{id: "ET4", cargo: 0, battery: 100},
+		&NormalTruck{id: "NT5", cargo: 0},
 	}
 
-	processFleet(ctx, fleet)
+	if err := processFleet(ctx, fleet); err != nil {
+		log.Printf("Error processing fleet: %v\n", err)
+		return
+	}
 	log.Println("All trucks were processed")
 }
