@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 )
 
 var (
 	ErrTruckNotFound      = errors.New("Truck not found")
 	ErrTruckAlreadyExists = errors.New("Truck already exists")
+	ErrInvalidInput       = errors.New("One or more inputs were invalid")
 )
 
 type FleetManager interface {
@@ -70,6 +72,13 @@ func (t *truckManager) UpdateTruck(id string, cargo int) error {
 	return nil
 }
 
+func (t *truckManager) ShowAllTrucks() {
+	for _, val := range t.trucks {
+		fmt.Printf("%v ", val)
+	}
+	fmt.Println()
+}
+
 func main() {
 	var f FleetManager
 	f = NewTruckManager()
@@ -88,12 +97,31 @@ func main() {
 		}
 		input = strings.TrimSpace(input)
 		args := strings.Fields(input)
+		cmd, id := args[0], args[1]
+		var cargo int
+		if cmd == "c" || cmd == "u" {
+			cargo, err = strconv.Atoi(args[2])
+			if err != nil {
+				fmt.Errorf("%v\n", ErrInvalidInput.Error())
+				continue
+			}
+		}
 		switch args[0] {
 		case "c":
-
+			f.AddTruck(id, cargo)
 		case "r":
+			t, err := f.GetTruck(id)
+			if err != nil {
+				fmt.Println(ErrTruckNotFound.Error())
+				continue
+			}
+			fmt.Printf("%v\n\n", *t)
 		case "u":
+			f.UpdateTruck(id, cargo)
 		case "d":
+			f.RemoveTruck(id)
+		default:
+			fmt.Errorf("%v\n", ErrInvalidInput.Error())
 		}
 	}
 }
