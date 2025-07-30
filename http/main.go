@@ -33,11 +33,15 @@ func UrlBuilder(method string, path string) string {
 func main() {
 	api := &api{addr: ":8080"}
 	mux := http.NewServeMux()
+	srv := &http.Server{
+		Addr:    api.addr,
+		Handler: mux,
+	}
 
 	mux.HandleFunc(UrlBuilder(http.MethodGet, "/"), api.getIndexHandler)
 	mux.HandleFunc(UrlBuilder(http.MethodPost, "/"), api.postIndexHandler)
 	mux.HandleFunc(UrlBuilder(http.MethodPost, "/about"), api.postAboutHandler)
-	if err := http.ListenAndServe(api.addr, mux); err != nil {
+	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }
